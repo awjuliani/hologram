@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Interactive Holography Demonstration</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✨</text></svg>">
     <style>
         * {
             margin: 0;
@@ -885,9 +886,22 @@
             const count = positions.length / 3;
             const index = Math.floor(Math.random() * count);
 
+            // Get local coordinates from geometry
+            const localX = positions[index * 3];
+            const localY = positions[index * 3 + 1];
+            const localZ = positions[index * 3 + 2];
+
+            // Apply Y-axis rotation to transform to world space
+            const rotationY = reconstructionPoints.rotation.y;
+            const cosR = Math.cos(rotationY);
+            const sinR = Math.sin(rotationY);
+
+            // Y-axis rotation: x' = x*cos + z*sin, z' = -x*sin + z*cos
+            const worldZ = -localX * sinR + localZ * cosR;
+
             return {
-                y: positions[index * 3 + 1],
-                z: positions[index * 3 + 2]
+                y: localY,  // Y is unchanged by Y-axis rotation
+                z: worldZ
             };
         }
 
