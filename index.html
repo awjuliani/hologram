@@ -1048,9 +1048,7 @@
             }
 
             // Update laser particles
-            if (animationSpeed > 0) {
-                updateLaserParticles(0.016 * animationSpeed);
-            }
+            updateLaserParticles(0.016);
 
             renderer.render(scene, camera);
         }
