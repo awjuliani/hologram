@@ -1,0 +1,1076 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Holography Demonstration</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(145deg, #0d0d1a 0%, #1a1a2e 100%);
+            color: #e8eaff;
+            overflow: hidden;
+            font-size: 14px;
+        }
+
+        #container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        #canvas-container {
+            flex: 1;
+            position: relative;
+            min-height: 0;
+        }
+
+        #main-canvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Left Sidebar */
+        #left-sidebar {
+            position: absolute;
+            top: 16px;
+            left: 16px;
+            bottom: 16px;
+            width: 280px;
+            background: rgba(18, 18, 32, 0.9);
+            border-radius: 12px;
+            border: 1px solid rgba(100, 130, 255, 0.15);
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(8px);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        #left-sidebar .sidebar-section {
+            padding: 20px;
+        }
+
+        #left-sidebar .sidebar-section:not(:last-child) {
+            border-bottom: 1px solid rgba(100, 130, 255, 0.15);
+        }
+
+        #left-sidebar .controls-section {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* Damage Section */
+        .damage-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .damage-hint {
+            font-size: 11px;
+            font-weight: 500;
+            color: #8899cc;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            text-align: center;
+        }
+
+        #damage-canvas {
+            width: 100%;
+            aspect-ratio: 1;
+            max-width: 200px;
+            border-radius: 8px;
+            cursor: crosshair;
+            border: 2px solid rgba(100, 130, 255, 0.25);
+            transition: all 0.2s ease;
+        }
+
+        #damage-canvas:hover {
+            border-color: rgba(100, 150, 255, 0.5);
+            box-shadow: 0 0 16px rgba(100, 130, 255, 0.2);
+        }
+
+        .damage-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .damage-buttons button {
+            padding: 8px 16px;
+            font-size: 12px;
+            font-weight: 500;
+            flex: 1;
+        }
+
+        /* Quality Indicator - Top Right */
+        #quality-indicator {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            background: rgba(18, 18, 32, 0.9);
+            padding: 16px 24px;
+            border-radius: 12px;
+            border: 1px solid rgba(100, 130, 255, 0.15);
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(8px);
+            text-align: center;
+        }
+
+        #quality-indicator label {
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: #8899bb;
+            margin-bottom: 6px;
+            display: block;
+        }
+
+        #quality-value {
+            font-size: 42px;
+            font-weight: 700;
+            color: #66ee88;
+            text-shadow: 0 0 24px rgba(100, 238, 136, 0.4);
+            line-height: 1;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* Navigation Hints - Bottom Right */
+        #nav-hints {
+            position: absolute;
+            bottom: 16px;
+            right: 16px;
+            background: rgba(18, 18, 32, 0.9);
+            padding: 10px 14px;
+            border-radius: 8px;
+            border: 1px solid rgba(100, 130, 255, 0.15);
+            backdrop-filter: blur(8px);
+            font-size: 12px;
+            color: #8899bb;
+        }
+
+        /* Control Groups */
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        label {
+            display: block;
+            font-size: 11px;
+            font-weight: 500;
+            color: #8899bb;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Shape Buttons */
+        .shape-buttons {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 6px;
+        }
+
+        .shape-btn {
+            padding: 8px 4px 6px;
+            font-size: 9px;
+            font-weight: 500;
+            background: rgba(35, 40, 65, 0.6);
+            border: 1px solid rgba(100, 130, 255, 0.2);
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            transition: all 0.2s ease;
+        }
+
+        .shape-btn svg {
+            width: 22px;
+            height: 22px;
+            fill: none;
+            stroke: #8899cc;
+            stroke-width: 1.5;
+            transition: stroke 0.2s ease;
+        }
+
+        .shape-btn:hover {
+            background: rgba(50, 55, 85, 0.8);
+            border-color: rgba(100, 150, 255, 0.35);
+        }
+
+        .shape-btn:hover svg {
+            stroke: #aabbee;
+        }
+
+        .shape-btn.active {
+            background: linear-gradient(145deg, rgba(70, 100, 180, 0.7), rgba(50, 80, 150, 0.7));
+            border-color: rgba(100, 150, 255, 0.5);
+            box-shadow: 0 2px 8px rgba(70, 100, 200, 0.3);
+        }
+
+        .shape-btn.active svg {
+            stroke: #ddeeff;
+        }
+
+        /* Sliders */
+        .sliders-group {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            padding: 8px 0;
+        }
+
+        .slider-row {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .slider-row label {
+            margin: 0;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: rgba(50, 60, 90, 0.8);
+            outline: none;
+            -webkit-appearance: none;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: linear-gradient(145deg, #6688ff, #4466dd);
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(70, 100, 255, 0.4);
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.1);
+            box-shadow: 0 2px 12px rgba(70, 100, 255, 0.6);
+        }
+
+        /* General Buttons */
+        button {
+            padding: 10px 16px;
+            border: none;
+            border-radius: 8px;
+            background: linear-gradient(145deg, rgba(70, 100, 180, 0.8), rgba(50, 80, 150, 0.8));
+            color: #e8eaff;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+            border: 1px solid rgba(100, 130, 255, 0.2);
+        }
+
+        button:hover {
+            background: linear-gradient(145deg, rgba(85, 115, 195, 0.9), rgba(65, 95, 165, 0.9));
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(70, 100, 200, 0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        /* Sidebar Title */
+        .sidebar-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #99bbff;
+            text-shadow: 0 0 24px rgba(100, 150, 255, 0.4);
+            margin: 0 0 12px 0;
+            letter-spacing: 0.5px;
+        }
+
+        .explanation {
+            font-size: 12px;
+            line-height: 1.55;
+            color: #b8c4e8;
+        }
+
+        .explanation p {
+            margin: 0 0 10px 0;
+        }
+
+        .explanation p:last-child {
+            margin-bottom: 0;
+        }
+
+        .explanation strong {
+            color: #88bbff;
+            font-weight: 600;
+        }
+
+        .explanation em {
+            color: #99ccff;
+            font-style: italic;
+        }
+
+        /* Key hints */
+        .key {
+            display: inline-block;
+            padding: 2px 6px;
+            background: rgba(70, 100, 180, 0.3);
+            border-radius: 4px;
+            margin: 0 2px;
+            font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+            font-size: 10px;
+            font-weight: 500;
+            color: #aabbee;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div id="canvas-container">
+            <canvas id="main-canvas"></canvas>
+
+            <!-- Left Sidebar -->
+            <div id="left-sidebar">
+                <div class="sidebar-section">
+                    <h2 class="sidebar-title">Holography Principles</h2>
+                    <div class="explanation">
+                        <p>A hologram encodes a 3D object as an <strong>interference pattern</strong>. Unlike a photograph, every point contains the <em>whole</em> image.</p>
+                        <p>Damage reduces <em>quality</em>, not content. Each fragment still contains the whole.</p>
+                    </div>
+                </div>
+
+                <div class="sidebar-section controls-section">
+                    <div class="damage-section">
+                        <div class="damage-hint">Draw to damage the plate</div>
+                        <canvas id="damage-canvas"></canvas>
+                        <div class="damage-buttons">
+                            <button id="clear-damage">Clear</button>
+                            <button id="random-damage">Random</button>
+                        </div>
+                    </div>
+
+                    <div class="control-group">
+                        <label>Shape</label>
+                        <div class="shape-buttons">
+                            <button class="shape-btn" data-shape="sphere">
+                                <svg viewBox="0 0 24 24">
+                                    <circle cx="12" cy="12" r="9"/>
+                                    <ellipse cx="12" cy="12" rx="9" ry="3"/>
+                                </svg>
+                                Sphere
+                            </button>
+                            <button class="shape-btn active" data-shape="torus">
+                                <svg viewBox="0 0 24 24">
+                                    <ellipse cx="12" cy="12" rx="10" ry="5"/>
+                                    <ellipse cx="12" cy="12" rx="4" ry="2"/>
+                                </svg>
+                                Torus
+                            </button>
+                            <button class="shape-btn" data-shape="cube">
+                                <svg viewBox="0 0 24 24">
+                                    <path d="M12 2L2 7v10l10 5 10-5V7L12 2z"/>
+                                    <path d="M12 22V12M12 12L2 7M12 12l10-5"/>
+                                </svg>
+                                Cube
+                            </button>
+                            <button class="shape-btn" data-shape="helix">
+                                <svg viewBox="0 0 24 24">
+                                    <path d="M6 4c6 0 6 4 12 4M6 10c6 0 6 4 12 4M6 16c6 0 6 4 12 4"/>
+                                </svg>
+                                Helix
+                            </button>
+                            <button class="shape-btn" data-shape="molecule">
+                                <svg viewBox="0 0 24 24">
+                                    <circle cx="12" cy="12" r="4"/>
+                                    <circle cx="5" cy="5" r="2.5"/>
+                                    <circle cx="19" cy="5" r="2.5"/>
+                                    <circle cx="5" cy="19" r="2.5"/>
+                                    <circle cx="19" cy="19" r="2.5"/>
+                                </svg>
+                                Molecule
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="sliders-group">
+                        <div class="slider-row">
+                            <label>Plate Resolution: <span id="points-value">500</span></label>
+                            <input type="range" id="reconstruction-points" min="100" max="2000" value="500" step="50">
+                        </div>
+                        <div class="slider-row">
+                            <label>Rotation Speed</label>
+                            <input type="range" id="animation-speed" min="0" max="2" value="1" step="0.1">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quality Indicator - Top Right -->
+            <div id="quality-indicator">
+                <label>Quality</label>
+                <div id="quality-value">100%</div>
+            </div>
+
+            <!-- Navigation Hints - Bottom Right -->
+            <div id="nav-hints">
+                <span class="key">Drag</span> Rotate
+                <span class="key">Scroll</span> Zoom
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // Scene setup
+        const canvas = document.getElementById('main-canvas');
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+
+        renderer.setSize(container.clientWidth, container.clientHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setClearColor(0x0a0a1a);
+
+        camera.position.set(0, 2, 8);
+        camera.lookAt(-1, 0, 0);
+
+        // Damage tracking
+        const damageCanvas = document.getElementById('damage-canvas');
+        const damageCtx = damageCanvas.getContext('2d');
+        const DAMAGE_RESOLUTION = 64;
+        let damageGrid = Array(DAMAGE_RESOLUTION).fill().map(() => Array(DAMAGE_RESOLUTION).fill(false));
+
+        function initDamageCanvas() {
+            damageCanvas.width = DAMAGE_RESOLUTION * 4;
+            damageCanvas.height = DAMAGE_RESOLUTION * 4;
+            clearDamage();
+        }
+
+        function clearDamage() {
+            damageGrid = Array(DAMAGE_RESOLUTION).fill().map(() => Array(DAMAGE_RESOLUTION).fill(false));
+            renderDamageCanvas();
+            updateReconstruction();
+        }
+
+        function renderDamageCanvas() {
+            const cellW = damageCanvas.width / DAMAGE_RESOLUTION;
+            const cellH = damageCanvas.height / DAMAGE_RESOLUTION;
+
+            const gradient = damageCtx.createLinearGradient(0, 0, damageCanvas.width, damageCanvas.height);
+            gradient.addColorStop(0, '#2a3a6a');
+            gradient.addColorStop(1, '#1a2a4a');
+            damageCtx.fillStyle = gradient;
+            damageCtx.fillRect(0, 0, damageCanvas.width, damageCanvas.height);
+
+            for (let i = 0; i < DAMAGE_RESOLUTION; i++) {
+                for (let j = 0; j < DAMAGE_RESOLUTION; j++) {
+                    const x = i * cellW;
+                    const y = j * cellH;
+
+                    if (damageGrid[i][j]) {
+                        damageCtx.fillStyle = 'rgba(20, 20, 30, 0.9)';
+                        damageCtx.fillRect(x, y, cellW, cellH);
+                    } else {
+                        const wave1 = Math.sin(i * 0.5 + j * 0.3) * 0.5 + 0.5;
+                        const wave2 = Math.sin(i * 0.3 - j * 0.4 + 2) * 0.5 + 0.5;
+                        const interference = (wave1 + wave2) / 2;
+                        const brightness = Math.floor(60 + interference * 80);
+                        damageCtx.fillStyle = `rgb(${brightness}, ${brightness + 30}, ${brightness + 60})`;
+                        damageCtx.fillRect(x + 1, y + 1, cellW - 2, cellH - 2);
+                    }
+                }
+            }
+
+            damageCtx.strokeStyle = 'rgba(100, 150, 255, 0.1)';
+            damageCtx.lineWidth = 1;
+            for (let i = 0; i <= DAMAGE_RESOLUTION; i += 8) {
+                damageCtx.beginPath();
+                damageCtx.moveTo(i * cellW, 0);
+                damageCtx.lineTo(i * cellW, damageCanvas.height);
+                damageCtx.stroke();
+                damageCtx.beginPath();
+                damageCtx.moveTo(0, i * cellH);
+                damageCtx.lineTo(damageCanvas.width, i * cellH);
+                damageCtx.stroke();
+            }
+        }
+
+        let isPainting = false;
+        const brushSize = 3;
+
+        function applyDamage(e) {
+            const rect = damageCanvas.getBoundingClientRect();
+            const scaleX = DAMAGE_RESOLUTION / rect.width;
+            const scaleY = DAMAGE_RESOLUTION / rect.height;
+            const x = Math.floor((e.clientX - rect.left) * scaleX);
+            const y = Math.floor((e.clientY - rect.top) * scaleY);
+
+            for (let dx = -brushSize; dx <= brushSize; dx++) {
+                for (let dy = -brushSize; dy <= brushSize; dy++) {
+                    if (dx * dx + dy * dy <= brushSize * brushSize) {
+                        const nx = x + dx;
+                        const ny = y + dy;
+                        if (nx >= 0 && nx < DAMAGE_RESOLUTION && ny >= 0 && ny < DAMAGE_RESOLUTION) {
+                            damageGrid[nx][ny] = true;
+                        }
+                    }
+                }
+            }
+            renderDamageCanvas();
+            updateReconstruction();
+        }
+
+        damageCanvas.addEventListener('mousedown', (e) => { isPainting = true; applyDamage(e); });
+        damageCanvas.addEventListener('mousemove', (e) => { if (isPainting) applyDamage(e); });
+        damageCanvas.addEventListener('mouseup', () => isPainting = false);
+        damageCanvas.addEventListener('mouseleave', () => isPainting = false);
+
+        function getDamagePercentage() {
+            let damaged = 0;
+            const total = DAMAGE_RESOLUTION * DAMAGE_RESOLUTION;
+            for (let i = 0; i < DAMAGE_RESOLUTION; i++) {
+                for (let j = 0; j < DAMAGE_RESOLUTION; j++) {
+                    if (damageGrid[i][j]) damaged++;
+                }
+            }
+            return damaged / total;
+        }
+
+        // 3D Objects
+        let reconstructionPoints;
+        let hologramPlate;
+        let currentShape = 'torus';
+        let reconstructionPointCount = 500;
+
+        function createShapeGeometry() {
+            let geometry;
+            let combinedPositions = [];
+
+            switch(currentShape) {
+                case 'sphere':
+                    geometry = new THREE.SphereGeometry(1, 48, 48);
+                    break;
+
+                case 'torus':
+                    geometry = new THREE.TorusGeometry(0.7, 0.3, 48, 96);
+                    break;
+
+                case 'cube':
+                    geometry = new THREE.BoxGeometry(1.4, 1.4, 1.4, 10, 10, 10);
+                    break;
+
+                case 'helix':
+                    class HelixCurve extends THREE.Curve {
+                        getPoint(t) {
+                            const turns = 3;
+                            const height = 2;
+                            const radius = 0.6;
+                            const angle = t * Math.PI * 2 * turns;
+                            return new THREE.Vector3(
+                                Math.cos(angle) * radius,
+                                (t - 0.5) * height,
+                                Math.sin(angle) * radius
+                            );
+                        }
+                    }
+                    const helixPath = new HelixCurve();
+                    geometry = new THREE.TubeGeometry(helixPath, 200, 0.12, 16, false);
+                    break;
+
+                case 'molecule':
+                    const centralSphere = new THREE.SphereGeometry(0.4, 16, 16);
+                    const atomPositions = [
+                        [0, 1, 0],
+                        [0.943, -0.333, 0],
+                        [-0.471, -0.333, 0.816],
+                        [-0.471, -0.333, -0.816]
+                    ];
+
+                    const centralPos = centralSphere.attributes.position;
+                    for (let i = 0; i < centralPos.count; i++) {
+                        combinedPositions.push(new THREE.Vector3(
+                            centralPos.getX(i),
+                            centralPos.getY(i),
+                            centralPos.getZ(i)
+                        ));
+                    }
+                    atomPositions.forEach(pos => {
+                        const atomSphere = new THREE.SphereGeometry(0.3, 12, 12);
+                        const atomPos = atomSphere.attributes.position;
+                        for (let i = 0; i < atomPos.count; i++) {
+                            combinedPositions.push(new THREE.Vector3(
+                                atomPos.getX(i) + pos[0],
+                                atomPos.getY(i) + pos[1],
+                                atomPos.getZ(i) + pos[2]
+                            ));
+                        }
+                    });
+                    return { combinedPositions };
+            }
+
+            return geometry;
+        }
+
+        function createHologramPlate() {
+            if (hologramPlate) scene.remove(hologramPlate);
+
+            const geometry = new THREE.PlaneGeometry(1, 1, DAMAGE_RESOLUTION - 1, DAMAGE_RESOLUTION - 1);
+            const material = new THREE.ShaderMaterial({
+                uniforms: {
+                    time: { value: 0 },
+                    resolution: { value: reconstructionPointCount / 2000.0 },
+                    damageTexture: { value: null }
+                },
+                vertexShader: `
+                    varying vec2 vUv;
+                    void main() {
+                        vUv = uv;
+                        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                    }
+                `,
+                fragmentShader: `
+                    uniform float time;
+                    uniform float resolution;
+                    varying vec2 vUv;
+
+                    void main() {
+                        // Scale pattern complexity based on resolution (points)
+                        float detail = 10.0 + resolution * 40.0;
+
+                        float wave1 = sin(vUv.x * detail + time) * 0.5 + 0.5;
+                        float wave2 = sin(vUv.y * detail * 0.8 - time * 0.7) * 0.5 + 0.5;
+                        float wave3 = sin((vUv.x + vUv.y) * detail * 0.7 + time * 0.5) * 0.5 + 0.5;
+                        float wave4 = sin((vUv.x - vUv.y) * detail * 0.5) * 0.5 + 0.5;
+
+                        // More waves visible at higher resolution
+                        float interference = (wave1 + wave2 + wave3 * resolution + wave4 * resolution) / (2.0 + resolution * 2.0);
+
+                        // Brighter and more detailed at higher resolution
+                        vec3 lowColor = vec3(0.15, 0.2, 0.4);
+                        vec3 highColor = vec3(0.3, 0.45, 0.85);
+                        vec3 color = mix(lowColor, highColor, interference * (0.7 + resolution * 0.3));
+
+                        gl_FragColor = vec4(color, 0.65 + resolution * 0.15);
+                    }
+                `,
+                transparent: true,
+                side: THREE.DoubleSide
+            });
+
+            hologramPlate = new THREE.Mesh(geometry, material);
+            hologramPlate.position.set(0, 0, 0);
+            hologramPlate.rotation.y = Math.PI / 8;
+
+            const frameGeometry = new THREE.BoxGeometry(1.1, 1.1, 0.1);
+            const frameMaterial = new THREE.MeshPhongMaterial({
+                color: 0x334466,
+                emissive: 0x112233
+            });
+            const frame = new THREE.Mesh(frameGeometry, frameMaterial);
+            frame.position.z = -0.05;
+            hologramPlate.add(frame);
+
+            scene.add(hologramPlate);
+        }
+
+        function createReconstruction(sourceGeometry) {
+            if (reconstructionPoints) scene.remove(reconstructionPoints);
+
+            let points = [];
+
+            if (sourceGeometry.combinedPositions) {
+                points = sourceGeometry.combinedPositions;
+            } else {
+                const positions = sourceGeometry.attributes.position;
+                for (let i = 0; i < positions.count; i++) {
+                    points.push(new THREE.Vector3(
+                        positions.getX(i),
+                        positions.getY(i),
+                        positions.getZ(i)
+                    ));
+                }
+            }
+
+            const pointGeometry = new THREE.BufferGeometry();
+            const pointMaterial = new THREE.PointsMaterial({
+                color: 0xff6688,
+                size: 0.08,
+                transparent: true,
+                opacity: 0.9,
+                blending: THREE.AdditiveBlending
+            });
+
+            const basePositions = new Float32Array(reconstructionPointCount * 3);
+            const currentPositions = new Float32Array(reconstructionPointCount * 3);
+            const noiseOffsets = new Float32Array(reconstructionPointCount * 3);
+
+            // Randomly sample points to ensure full shape coverage
+            // More points = denser/clearer reconstruction
+            for (let i = 0; i < reconstructionPointCount; i++) {
+                // Random sampling ensures even spatial distribution
+                const randomIndex = Math.floor(Math.random() * points.length);
+                const sourcePoint = points[randomIndex];
+
+                basePositions[i * 3] = sourcePoint.x;
+                basePositions[i * 3 + 1] = sourcePoint.y;
+                basePositions[i * 3 + 2] = sourcePoint.z;
+
+                currentPositions[i * 3] = basePositions[i * 3];
+                currentPositions[i * 3 + 1] = basePositions[i * 3 + 1];
+                currentPositions[i * 3 + 2] = basePositions[i * 3 + 2];
+
+                noiseOffsets[i * 3] = (Math.random() - 0.5) * 2;
+                noiseOffsets[i * 3 + 1] = (Math.random() - 0.5) * 2;
+                noiseOffsets[i * 3 + 2] = (Math.random() - 0.5) * 2;
+            }
+
+            pointGeometry.setAttribute('position', new THREE.BufferAttribute(currentPositions, 3));
+            pointGeometry.userData = { basePositions, noiseOffsets };
+
+            reconstructionPoints = new THREE.Points(pointGeometry, pointMaterial);
+            reconstructionPoints.position.set(2.5, 0, 0);
+            scene.add(reconstructionPoints);
+        }
+
+        function updateReconstruction() {
+            if (!reconstructionPoints) return;
+
+            const damagePercent = getDamagePercentage();
+            const quality = Math.max(0, 1 - damagePercent);
+
+            const qualityValue = document.getElementById('quality-value');
+            qualityValue.textContent = Math.round(quality * 100) + '%';
+
+            if (quality > 0.7) {
+                qualityValue.style.color = '#88ff88';
+            } else if (quality > 0.4) {
+                qualityValue.style.color = '#ffaa44';
+            } else {
+                qualityValue.style.color = '#ff6666';
+            }
+
+            const geometry = reconstructionPoints.geometry;
+            const positions = geometry.attributes.position.array;
+            const { basePositions, noiseOffsets } = geometry.userData;
+
+            const noiseAmount = damagePercent * 1.5;
+
+            for (let i = 0; i < positions.length / 3; i++) {
+                positions[i * 3] = basePositions[i * 3] + noiseOffsets[i * 3] * noiseAmount;
+                positions[i * 3 + 1] = basePositions[i * 3 + 1] + noiseOffsets[i * 3 + 1] * noiseAmount;
+                positions[i * 3 + 2] = basePositions[i * 3 + 2] + noiseOffsets[i * 3 + 2] * noiseAmount;
+            }
+
+            geometry.attributes.position.needsUpdate = true;
+
+            reconstructionPoints.material.opacity = 0.3 + quality * 0.7;
+            reconstructionPoints.material.size = 0.04 + quality * 0.06;
+
+            updateHologramPlateVisuals();
+        }
+
+        function updateHologramPlateVisuals() {
+            if (!hologramPlate) return;
+
+            const geometry = hologramPlate.geometry;
+            const positions = geometry.attributes.position;
+
+            for (let i = 0; i < positions.count; i++) {
+                const x = Math.floor((positions.getX(i) + 0.5) * DAMAGE_RESOLUTION);
+                const y = Math.floor((positions.getY(i) + 0.5) * DAMAGE_RESOLUTION);
+
+                if (x >= 0 && x < DAMAGE_RESOLUTION && y >= 0 && y < DAMAGE_RESOLUTION) {
+                    if (damageGrid[x][y]) {
+                        positions.setZ(i, -0.1);
+                    } else {
+                        positions.setZ(i, 0);
+                    }
+                }
+            }
+            positions.needsUpdate = true;
+        }
+
+        // Laser beam visualization
+        let laserEmitter;
+        let laserParticles;
+        const NUM_PARTICLES = 50;
+        const PLATE_X = 0;
+        const RECONSTRUCTION_X = 2.5;
+
+        function createLaserSystem() {
+            // Create laser emitter (small cylinder)
+            const emitterGeometry = new THREE.CylinderGeometry(0.15, 0.2, 0.4, 16);
+            const emitterMaterial = new THREE.MeshPhongMaterial({
+                color: 0x444466,
+                emissive: 0x222233,
+                shininess: 100
+            });
+            laserEmitter = new THREE.Mesh(emitterGeometry, emitterMaterial);
+            laserEmitter.rotation.z = Math.PI / 2;
+            laserEmitter.position.set(-4.5, 0, 0);
+
+            // Add glowing tip
+            const tipGeometry = new THREE.SphereGeometry(0.1, 16, 16);
+            const tipMaterial = new THREE.MeshBasicMaterial({
+                color: 0xff6688,
+                transparent: true,
+                opacity: 0.9
+            });
+            const tip = new THREE.Mesh(tipGeometry, tipMaterial);
+            tip.position.x = 0.25;
+            laserEmitter.add(tip);
+
+            scene.add(laserEmitter);
+
+            // PARTICLES: Will target actual reconstruction points
+            const particleGeometry = new THREE.BufferGeometry();
+            const particlePositions = new Float32Array(NUM_PARTICLES * 3);
+            const particleData = [];
+
+            for (let i = 0; i < NUM_PARTICLES; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const radius = Math.random() * 0.35;
+                particleData.push({
+                    speed: 1.5 + Math.random() * 1,
+                    baseY: Math.cos(angle) * radius,
+                    baseZ: Math.sin(angle) * radius,
+                    targetY: 0,
+                    targetZ: 0,
+                    hasCrossedPlate: false
+                });
+
+                particlePositions[i * 3] = -4.2 + Math.random() * 3;
+                particlePositions[i * 3 + 1] = particleData[i].baseY;
+                particlePositions[i * 3 + 2] = particleData[i].baseZ;
+            }
+
+            particleGeometry.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
+            particleGeometry.userData = { particleData };
+
+            const particleMaterial = new THREE.PointsMaterial({
+                color: 0xff8899,
+                size: 0.07,
+                transparent: true,
+                opacity: 0.85,
+                blending: THREE.AdditiveBlending
+            });
+
+            laserParticles = new THREE.Points(particleGeometry, particleMaterial);
+            scene.add(laserParticles);
+        }
+
+        function getRandomReconstructionTarget() {
+            if (!reconstructionPoints) return { y: 0, z: 0 };
+
+            const positions = reconstructionPoints.geometry.attributes.position.array;
+            const count = positions.length / 3;
+            const index = Math.floor(Math.random() * count);
+
+            return {
+                y: positions[index * 3 + 1],
+                z: positions[index * 3 + 2]
+            };
+        }
+
+        function updateLaserParticles(deltaTime) {
+            if (!laserParticles) return;
+
+            const positions = laserParticles.geometry.attributes.position.array;
+            const { particleData } = laserParticles.geometry.userData;
+
+            for (let i = 0; i < NUM_PARTICLES; i++) {
+                const data = particleData[i];
+                const x = positions[i * 3];
+
+                // Move particle forward
+                positions[i * 3] += data.speed * deltaTime * 2;
+
+                // Check if particle just crossed the plate
+                if (x < PLATE_X && positions[i * 3] >= PLATE_X && !data.hasCrossedPlate) {
+                    data.hasCrossedPlate = true;
+                    // Get a target point from the actual reconstruction
+                    const target = getRandomReconstructionTarget();
+                    data.targetY = target.y;
+                    data.targetZ = target.z;
+                }
+
+                // Before plate: stay parallel (coherent beam)
+                if (positions[i * 3] < PLATE_X) {
+                    positions[i * 3 + 1] = data.baseY;
+                    positions[i * 3 + 2] = data.baseZ;
+                } else {
+                    // After plate: interpolate toward target point on reconstruction
+                    const progress = (positions[i * 3] - PLATE_X) / (RECONSTRUCTION_X - PLATE_X);
+                    positions[i * 3 + 1] = data.baseY + (data.targetY - data.baseY) * progress;
+                    positions[i * 3 + 2] = data.baseZ + (data.targetZ - data.baseZ) * progress;
+                }
+
+                // Reset particle when it reaches the reconstruction
+                if (positions[i * 3] > RECONSTRUCTION_X) {
+                    positions[i * 3] = -4.2;
+                    const angle = Math.random() * Math.PI * 2;
+                    const radius = Math.random() * 0.35;
+                    data.baseY = Math.cos(angle) * radius;
+                    data.baseZ = Math.sin(angle) * radius;
+                    data.hasCrossedPlate = false;
+                    positions[i * 3 + 1] = data.baseY;
+                    positions[i * 3 + 2] = data.baseZ;
+                }
+            }
+
+            laserParticles.geometry.attributes.position.needsUpdate = true;
+        }
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0x404060, 0.5);
+        scene.add(ambientLight);
+
+        const pointLight1 = new THREE.PointLight(0x6688ff, 1, 20);
+        pointLight1.position.set(5, 5, 5);
+        scene.add(pointLight1);
+
+        const pointLight2 = new THREE.PointLight(0xff6688, 0.5, 20);
+        pointLight2.position.set(-5, 3, 3);
+        scene.add(pointLight2);
+
+        // Camera controls
+        let isDragging = false;
+        let previousMousePosition = { x: 0, y: 0 };
+        let cameraAngle = { theta: 0, phi: Math.PI / 6 };
+        let cameraDistance = 8;
+
+        canvas.addEventListener('mousedown', (e) => {
+            if (e.target === canvas) {
+                isDragging = true;
+                previousMousePosition = { x: e.clientX, y: e.clientY };
+            }
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (isDragging) {
+                const deltaX = e.clientX - previousMousePosition.x;
+                const deltaY = e.clientY - previousMousePosition.y;
+
+                cameraAngle.theta -= deltaX * 0.005;
+                cameraAngle.phi = Math.max(-Math.PI / 3, Math.min(Math.PI / 3, cameraAngle.phi + deltaY * 0.005));
+
+                previousMousePosition = { x: e.clientX, y: e.clientY };
+            }
+        });
+
+        canvas.addEventListener('mouseup', () => isDragging = false);
+        canvas.addEventListener('mouseleave', () => isDragging = false);
+
+        canvas.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            cameraDistance = Math.max(4, Math.min(15, cameraDistance + e.deltaY * 0.01));
+        });
+
+        // UI Event handlers
+        document.getElementById('clear-damage').addEventListener('click', clearDamage);
+
+        document.getElementById('random-damage').addEventListener('click', () => {
+            const damageAmount = 0.15 + Math.random() * 0.2;
+            for (let i = 0; i < DAMAGE_RESOLUTION; i++) {
+                for (let j = 0; j < DAMAGE_RESOLUTION; j++) {
+                    damageGrid[i][j] = Math.random() < damageAmount;
+                }
+            }
+            renderDamageCanvas();
+            updateReconstruction();
+        });
+
+        document.querySelectorAll('.shape-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.shape-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentShape = btn.dataset.shape;
+                const geometry = createShapeGeometry();
+                createReconstruction(geometry);
+                updateReconstruction();
+            });
+        });
+
+        document.getElementById('reconstruction-points').addEventListener('input', (e) => {
+            reconstructionPointCount = parseInt(e.target.value);
+            document.getElementById('points-value').textContent = reconstructionPointCount;
+            const geometry = createShapeGeometry();
+            createReconstruction(geometry);
+            updateReconstruction();
+            // Update hologram plate resolution
+            if (hologramPlate && hologramPlate.material.uniforms) {
+                hologramPlate.material.uniforms.resolution.value = reconstructionPointCount / 2000.0;
+            }
+        });
+
+        // Animation
+        let animationSpeed = 1;
+        document.getElementById('animation-speed').addEventListener('input', (e) => {
+            animationSpeed = parseFloat(e.target.value);
+        });
+
+        let time = 0;
+        function animate() {
+            requestAnimationFrame(animate);
+
+            time += 0.016 * animationSpeed;
+
+            camera.position.x = Math.sin(cameraAngle.theta) * Math.cos(cameraAngle.phi) * cameraDistance;
+            camera.position.y = Math.sin(cameraAngle.phi) * cameraDistance;
+            camera.position.z = Math.cos(cameraAngle.theta) * Math.cos(cameraAngle.phi) * cameraDistance;
+            camera.lookAt(-1, 0, 0);
+
+            if (reconstructionPoints) {
+                reconstructionPoints.rotation.y = time * 0.3;
+            }
+
+            if (hologramPlate && hologramPlate.material.uniforms) {
+                hologramPlate.material.uniforms.time.value = time;
+            }
+
+            // Update laser particles
+            if (animationSpeed > 0) {
+                updateLaserParticles(0.016 * animationSpeed);
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        // Handle resize
+        window.addEventListener('resize', () => {
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+            renderer.setSize(width, height);
+        });
+
+        // Initialize
+        initDamageCanvas();
+        const initialGeometry = createShapeGeometry();
+        createHologramPlate();
+        createReconstruction(initialGeometry);
+        createLaserSystem();
+        animate();
+    </script>
+</body>
+</html>
